@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="./css/style.css">
+    <title>Chat Max</title>
+</head>
+<body>
+    
+  <section class="container">
+
+      <section class="login">
+          <h2>Login</h2>
+          <form class="login__form">
+               <input type="text" class="login__input login__input--username" placeholder="Seu nome" required />
+              <input type="password" class="login__input login__input--password" placeholder="Senha" required />
+              
+              <button type="submit" class="login__button">Entrar</button>
+          </form>
+      </section>
+
+      <section class="chat">
+          <section class="chat__messages">
+              <!-- <div class="message--self">Hello, World!</div>
+
+              <div class="message--other">
+                  <span class="message--sender">Manual do Dev</span>
+                  Olá, Mundo!
+              </div> -->
+          </section>
+
+          <form class="chat__form">
+              <input type="text" class="chat__input" placeholder="Digite uma mensagem" required />
+              <button type="submit" class="chat__button">
+                  <span class="material-symbols-outlined">send</span>
+              </button>
+          </form>
+      </section>
+
+  </section>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="./js/script.js"></script>
+</body>
+</html>
