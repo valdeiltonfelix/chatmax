@@ -112,6 +112,20 @@ const handleLogin = (event) => {
           
         })
 
+        window.addEventListener('load', () => {
+            const savedUser = loadUserState();
+            if (savedUser) {
+                user = savedUser;
+                login.style.display = "none";
+                chat.style.display = "flex";
+                websocket = new WebSocket("ws://localhost:8080");
+                websocket.onmessage = processMessage;
+                websocket.onopen = () => {
+                    websocket.send(JSON.stringify({ type: 'login', user }));
+                };
+                initializeChat();
+            }
+        });
 
  
 }
