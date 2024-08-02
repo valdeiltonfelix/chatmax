@@ -9,6 +9,11 @@ const chat = document.querySelector(".chat")
 const chatForm = chat.querySelector(".chat__form")
 const chatInput = chat.querySelector(".chat__input")
 const chatMessages = chat.querySelector(".chat__messages")
+const logoutButton = chat.querySelector(".logout__button");
+const menuButton = chat.querySelector(".menu-button");
+const sidebar = chat.querySelector(".chat__sidebar");
+const userList = chat.querySelector(".user__list");
+
 
 const colors = [
     "cadetblue",
@@ -18,6 +23,25 @@ const colors = [
     "hotpink",
     "gold"
 ]
+
+        const loadChatState = () => {
+            const savedChatState = localStorage.getItem('chatState');
+            return savedChatState ? JSON.parse(savedChatState) : [];
+        };
+
+        const saveUserState = (user) => {
+            localStorage.setItem('userState', JSON.stringify(user));
+        };
+
+        const loadUserState = () => {
+            const savedUserState = localStorage.getItem('userState');
+            return savedUserState ? JSON.parse(savedUserState) : null;
+        };
+        
+        const clearUserState = () => {
+            localStorage.removeItem('userState');
+            localStorage.removeItem('chatState');
+        };
 
 const user = { id: "", name: "", color: "" }
 
@@ -61,18 +85,42 @@ const scrollScreen = () => {
     })
 }
 
-const processMessage = ({ data }) => {
-    const { userId, userName, userColor, content } = JSON.parse(data)
+     const processMessage = ({ data }) => {
+            const messageData = JSON.parse(data);
+            if (messageData.type === 'chat') {
+                const { userId, userName, userColor, content } = messageData;
+                const message = userId === user.id
+                    ? createMessageSelfElement(content)
+                    : createMessageOtherElement(content, userName, userColor);
+                chatMessages.appendChild(message);
+                scrollScreen();
+            } else if (messageData.type === 'userList') {
+                updateUserList(messageData.users);
+            }
+        };
 
-    const message =
-        userId == user.id
-            ? createMessageSelfElement(content)
-            : createMessageOtherElement(content, userName, userColor)
+        const updateUserList = (users) => {
+            userList.innerHTML = '';
+            users.forEach(({ name, color }) => {
+                const li = document.createElement('li');
+                li.textContent = name;
+                li.style.color = color;
+                userList.appendChild(li);
+            });
+        };
 
-    chatMessages.appendChild(message)
+// const processMessage = ({ data }) => {
+//     const { userId, userName, userColor, content } = JSON.parse(data)
 
-    scrollScreen()
-}
+//     const message =
+//         userId == user.id
+//             ? createMessageSelfElement(content)
+//             : createMessageOtherElement(content, userName, userColor)
+
+//     chatMessages.appendChild(message)
+
+//     scrollScreen()
+// }
 
 const handleLogin = (event) => {
    var verifica=false
@@ -86,18 +134,21 @@ const handleLogin = (event) => {
     // Verifica o nome de usuário e a senha
     const username = loginInput.value.trim();
     const password = loginPassword.value.trim();
+    user.color = getRandomColor()
+    user.id = Math.random()
 
      $.ajax({
         method: "POST",
-        url: "http://142.93.146.197:3035/login",
-        data: { login: username, password: password }
+        url: "http://142.93.146.197:4041/login",
+        data: { login: username, password: password,idsessao:user.id,color:user.color }
       }).done(function(){
 
-        user.id = Math.random()
+        
         user.name = loginInput.value
-        user.color = getRandomColor()
+        
         login.style.display = "none"
         chat.style.display = "flex"
+        saveUserState(user);
         websocket = new WebSocket("ws://142.93.146.197:8085")
     //ebsocket = new WebSocket ("http://192.168.0.160:8080/APLICACAO") 
         websocket.onmessage = processMessage
@@ -112,39 +163,83 @@ const handleLogin = (event) => {
           
         })
 
-        window.addEventListener('load', () => {
-            const savedUser = loadUserState();
-            if (savedUser) {
-                user = savedUser;
-                login.style.display = "none";
-                chat.style.display = "flex";
-                websocket = new WebSocket("ws://localhost:8080");
-                websocket.onmessage = processMessage;
-                websocket.onopen = () => {
-                    websocket.send(JSON.stringify({ type: 'login', user }));
-                };
-                initializeChat();
-            }
-        });
 
  
 }
 
+window.addEventListener('load', () => {
+            const savedUser = loadUserState();
+            if (savedUser) {
+              const  user = savedUser;
+                login.style.display = "none";
+                chat.style.display = "flex";
+                websocket = new WebSocket("ws://localhost:8085");
+                websocket.onmessage = processMessage;
+                websocket.onopen = () => {
+                    websocket.send(JSON.stringify({ type: 'login', user }));
+                };
+                //initializeChat();
+            }
+});
+
 
 const sendMessage = (event) => {
-    event.preventDefault()
-
-    const message = {
-        userId: user.id,
-        userName: user.name,
-        userColor: user.color,
-        content: chatInput.value
-    }
-
-    websocket.send(JSON.stringify(message))
-
-    chatInput.value = ""
-}
+            event.preventDefault();
+            const message = {
+                type: 'chat',
+                userId: user.id,
+                userName: user.name,
+                userColor: user.color,
+                content: chatInput.value
+            };
+            websocket.send(JSON.stringify(message));
+            chatInput.value = "";
+        };
 
 loginForm.addEventListener("submit", handleLogin)
 chatForm.addEventListener("submit", sendMessage)
+
+
+
+     const handleLogout = () => {
+        
+            // swal(
+            //     'Deleted!',
+            //     'Your file has been deleted.',
+            //     'success'
+            //   );
+
+            swal.fire({
+                text: "Deseja sair do chat !",
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sim',
+                cancelButtonText:"Cancelar",
+              }).then(function(confirm) {
+                
+                if(confirm.isConfirmed){
+                    swal.fire(
+                        'Logaut!',
+                        'Logaut com sucesso do chat',
+                        'success'
+                      );
+                      
+                      clearUserState();
+                      chat.style.display = "none";
+                      login.style.display = "block";
+                      websocket.send(JSON.stringify({ type: 'logout', user }));
+                      websocket.close();
+                }
+               
+
+              });
+}
+
+    logoutButton.addEventListener("click", handleLogout);
+
+      // Toggle sidebar visibility
+        menuButton.addEventListener('click', () => {
+            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+        });
