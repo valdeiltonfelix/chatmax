@@ -23,6 +23,7 @@ const colors = [
     "hotpink",
     "gold"
 ]
+window.onload = null;
 
         const loadChatState = () => {
             const savedChatState = localStorage.getItem('chatState');
@@ -86,28 +87,73 @@ const scrollScreen = () => {
 }
 
      const processMessage = ({ data }) => {
+     
             const messageData = JSON.parse(data);
             if (messageData.type === 'chat') {
-                const { userId, userName, userColor, content } = messageData;
+                dadosUser={
+                       userId: messageData.data.id,
+                       userName: messageData.data.user,
+                       userColor: messageData.data.color,
+                       content: messageData.data.content
+                     };
+                     console.log(dadosUser);
+
+                const { userId, userName, userColor, content } = dadosUser;
+                console.log(userId, userName, userColor, content);
                 const message = userId === user.id
                     ? createMessageSelfElement(content)
                     : createMessageOtherElement(content, userName, userColor);
                 chatMessages.appendChild(message);
                 scrollScreen();
-            } else if (messageData.type === 'userList') {
-                updateUserList(messageData.users);
+            } else if (messageData.type == 'user_list') {
+                updateUserList(messageData.users); 
+            } else if(messageData.type=="logout"){
+                 logautUsers(messageData);
+                 clearUserState();
+                 // websocket.close();
             }
         };
 
         const updateUserList = (users) => {
-            userList.innerHTML = '';
-            users.forEach(({ name, color }) => {
-                const li = document.createElement('li');
-                li.textContent = name;
-                li.style.color = color;
-                userList.appendChild(li);
-            });
+     
+            const div = document.querySelector(".user__list");
+            div.innerHTML="";
+            users.forEach(function(data){
+                if(data.data!=undefined){
+                     const li = document.createElement('li');
+                     li.textContent = data.data.user;
+                     li.id=data.data.id;
+                     li.style.color = data.data.color;
+                     userList.appendChild(li);
+                }
+            })    
         };
+
+
+         const logautUsers = (users) => {
+     
+            const div = document.querySelector(".user__list");
+            div.innerHTML="";
+            console.log(users);
+            users.data.forEach(function(data){
+                if(data.data!=undefined){
+                     const li = document.createElement('li');
+                     li.textContent = data.data.user;
+                     li.id=data.data.id;
+                     li.style.color = data.data.color;
+                     userList.appendChild(li);
+                }else{
+                      console.log("-->");
+                     const li = document.createElement('li');
+                     li.textContent = data.user;
+                     li.id=data.id;
+                     li.style.color = data.color;
+                     userList.appendChild(li);
+
+                }
+            })      
+          
+  };
 
 // const processMessage = ({ data }) => {
 //     const { userId, userName, userColor, content } = JSON.parse(data)
@@ -149,10 +195,23 @@ const handleLogin = (event) => {
         login.style.display = "none"
         chat.style.display = "flex"
         saveUserState(user);
-        websocket = new WebSocket("ws://142.93.146.197:8085")
-    //ebsocket = new WebSocket ("http://192.168.0.160:8080/APLICACAO") 
-        websocket.onmessage = processMessage
+         websocket = new WebSocket("ws://142.93.146.197:8085")
+         websocket.onopen = function() {
+            // Enviar dados do usuário para o servidor
+            websocket.send(JSON.stringify({
+                type: 'add_users',
+                data: {
+                    user: user.name,
+                    id: user.id,
+                    color: user.color
+                }
+            }));
+        };
 
+        websocket.onmessage = processMessage
+      
+
+  
       }).fail(function(respon){
             Swal.fire({
 
@@ -167,30 +226,31 @@ const handleLogin = (event) => {
  
 }
 
-window.addEventListener('load', () => {
-            const savedUser = loadUserState();
-            if (savedUser) {
-              const  user = savedUser;
-                login.style.display = "none";
-                chat.style.display = "flex";
-                websocket = new WebSocket("ws://localhost:8085");
-                websocket.onmessage = processMessage;
-                websocket.onopen = () => {
-                    websocket.send(JSON.stringify({ type: 'login', user }));
-                };
-                //initializeChat();
-            }
-});
+// window.addEventListener('load', () => {
+//             const savedUser = loadUserState();
+//             if (savedUser) {
+//                 const  user = savedUser;
+//                 login.style.display = "none";
+//                 chat.style.display = "flex";
+//                 websocket = new WebSocket("ws://localhost:8085");
+//                 websocket.onmessage = processMessage;
+//                 websocket.onopen = () => {
+//                     websocket.send(JSON.stringify({ type: 'login', user }));
+//                 };
+//                 //initializeChat();
+//              }
+// });
 
 
 const sendMessage = (event) => {
             event.preventDefault();
             const message = {
                 type: 'chat',
-                userId: user.id,
-                userName: user.name,
-                userColor: user.color,
-                content: chatInput.value
+                data:{id:      user.id,
+                      user:    user.name,
+                      color:   user.color,
+                      content: chatInput.value
+                }
             };
             websocket.send(JSON.stringify(message));
             chatInput.value = "";
@@ -203,15 +263,11 @@ chatForm.addEventListener("submit", sendMessage)
 
      const handleLogout = () => {
         
-            // swal(
-            //     'Deleted!',
-            //     'Your file has been deleted.',
-            //     'success'
-            //   );
-
+    
             swal.fire({
                 text: "Deseja sair do chat !",
-                type: 'warning',
+                icon: 'warning',
+                // type: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
@@ -226,10 +282,22 @@ chatForm.addEventListener("submit", sendMessage)
                         'success'
                       );
                       
-                      clearUserState();
+                      //clearUserState();
                       chat.style.display = "none";
                       login.style.display = "block";
-                      websocket.send(JSON.stringify({ type: 'logout', user }));
+
+                      websocket.send(
+                          JSON.stringify({
+                            type: 'logout',
+                            data: {
+                                user: user.name,
+                                id: user.id,
+                                color: user.color
+                            }
+                         })
+
+                        );
+                      websocket.onmessage = processMessage
                       websocket.close();
                 }
                
@@ -243,3 +311,11 @@ chatForm.addEventListener("submit", sendMessage)
         menuButton.addEventListener('click', () => {
             sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
         });
+
+
+const form = document.getElementById('bbb');
+  form.addEventListener('load', (event) => {
+    event.preventDefault();
+    // Enviar os dados do formulário via AJAX
+    // ...
+  });
