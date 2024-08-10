@@ -195,7 +195,7 @@ const handleLogin = (event) => {
         login.style.display = "none"
         chat.style.display = "flex"
         saveUserState(user);
-         websocket = new WebSocket("ws://142.93.146.197:8085")
+         websocket = new WebSocket("ws://192.168.0.168:8085")
          websocket.onopen = function() {
             // Enviar dados do usuário para o servidor
             websocket.send(JSON.stringify({
